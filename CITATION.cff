@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "Pour citer ce dépôt, utiliser les métadonnées ci-dessous."
+title: "10-credit-lab-ca : moteurs de PD sur vérité connue, ECL IFRS 9, capital IRB OSFI, dossier de crédit Enbridge"
+authors:
+  - family-names: Vaudescal
+    given-names: Guillaume
+year: 2026
+url: "https://github.com/Guilou001/10-credit-lab-ca"
+repository-code: "https://github.com/Guilou001/10-credit-lab-ca"
+license: MIT

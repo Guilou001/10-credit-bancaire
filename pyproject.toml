@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "clab"
+version = "0.1.0"
+description = "Laboratoire de crédit canadien : trois moteurs de PD vérifiés sur portefeuille synthétique à vérité connue, ECL IFRS 9 par scénarios, capital IRB aux paramètres OSFI, provisions réelles des grandes banques (Valet), et dossier de crédit Excel sur Enbridge."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Guillaume Vaudescal" }]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.2",
+  "scipy>=1.13",
+  "scikit-learn>=1.5",
+  "matplotlib>=3.9",
+  "openpyxl>=3.1",
+  "typer>=0.12",
+  "requests>=2.32",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+clab = "clab.cli:app"
+
+[project.urls]
+Repository = "https://github.com/Guilou001/10-credit-lab-ca"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/clab"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501", "B008"]
