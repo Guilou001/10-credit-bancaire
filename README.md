@@ -63,7 +63,7 @@ rapportés). Ce que ce dépôt apporte :
 | Source | Contenu | Statut et accès |
 |---|---|---|
 | Simulateur du dépôt | 8 000 prêts, 72 mois, hasard logistique (constante −6,2 ; score −1,1 ; cycle 0,9), remboursement anticipé 0,8 %/mois | vérité connue, graine fixée |
-| SEC, companyfacts (CIK 895728) | Enbridge, exercices 2010-2025 en CAD (revenus, EBITDA, dette, intérêts, flux) | mesuré ; `clab fetch`, jamais commité |
+| SEC, companyfacts (CIK 895728) | Enbridge, exercices 2011-2025 en CAD (revenus, EBITDA, dette, intérêts, flux ; la source remonte à 2010, l'exercice incomplet est écarté, coupe déclarée) | mesuré ; `clab fetch`, jamais commité |
 | Banque du Canada, Valet | FVI_PCL_RATIO_SIB : provisions pour pertes / encours, grandes banques, 2018-2026 trimestriel | mesuré (rapporté par la BdC) ; `clab fetch` |
 | Freddie Mac, échantillon prêt par prêt | 50 000 prêts par millésime, 1999-2026 | inscription gratuite non scriptable : DÉPÔT MANUEL déclaré, le laboratoire tourne sans lui sur le synthétique |
 
