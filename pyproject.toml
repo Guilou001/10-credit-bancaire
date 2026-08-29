@@ -28,7 +28,7 @@ dev = ["pytest>=8", "ruff>=0.6"]
 clab = "clab.cli:app"
 
 [project.urls]
-Repository = "https://github.com/Guilou001/10-credit-lab-ca"
+Repository = "https://github.com/Guilou001/10-credit-bancaire"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/clab"]

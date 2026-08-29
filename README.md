@@ -6,7 +6,7 @@ c'est testé), la provision IFRS 9 par scénarios pondérés, le capital réglem
 de l'OSFI, les provisions réelles des grandes banques canadiennes, et le livrable que dix offres
 d'emploi sur dix demandent : un dossier de crédit Excel complet sur Enbridge.
 
-[![ci](https://github.com/Guilou001/10-credit-lab-ca/actions/workflows/ci.yml/badge.svg)](https://github.com/Guilou001/10-credit-lab-ca/actions/workflows/ci.yml)
+[![ci](https://github.com/Guilou001/10-credit-bancaire/actions/workflows/ci.yml/badge.svg)](https://github.com/Guilou001/10-credit-bancaire/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.12-blue)
 ![licence](https://img.shields.io/badge/code-MIT-green)
 
