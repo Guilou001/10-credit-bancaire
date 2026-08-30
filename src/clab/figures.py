@@ -7,23 +7,16 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from gvf.style import OKABE_ITO, appliquer, formateur
 
-OKABE_ITO = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#56B4E9", "#F0E442", "#000000"]
+# La palette et les réglages viennent de la couche partagée du portefeuille : les mêmes couleurs et
+# la même virgule décimale dans les vingt-neuf dépôts, corrigées à un seul endroit.
 
 
 def use_style():
-    import matplotlib as mpl
-    from cycler import cycler
-    from matplotlib.ticker import FuncFormatter
-
-    mpl.rcParams.update({
-        "figure.dpi": 200, "savefig.dpi": 200, "figure.constrained_layout.use": True,
-        "font.size": 11, "axes.titlesize": 12, "axes.prop_cycle": cycler(color=OKABE_ITO),
-        "axes.spines.top": False, "axes.spines.right": False,
-        "axes.grid": True, "grid.alpha": 0.3, "grid.linewidth": 0.5,
-        "legend.frameon": False, "lines.linewidth": 1.8,
-    })
-    return FuncFormatter(lambda v, _: f"{v:g}".replace(".", ","))
+    """Les réglages communs, puis le formateur d'axe en français."""
+    appliquer()
+    return formateur()
 
 
 def fig_pcl(pcl: pd.Series, dest: Path) -> None:
@@ -106,3 +99,55 @@ def fig_enbridge(ratios: pd.DataFrame, dest: Path) -> None:
     ax.legend(lines, labels, loc="upper right", fontsize=9)
     fig.savefig(dest)
     plt.close(fig)
+
+
+def fig_discrimination(defaut, score_de_risque, plafond: dict, calib, dest: Path) -> dict:
+    """Le pouvoir de classement du score, et la justesse des probabilités qu'il annonce.
+
+    Deux volets, parce que ce sont deux questions différentes. À gauche, le score range-t-il les
+    emprunteurs dans le bon ordre. À droite, les probabilités annoncées tombent-elles juste.
+    """
+    from gvf.figures import roc_ks
+    from gvf.style import GRIS, enregistrer, fr
+
+    from .discrimination import pouvoir_de_classement
+
+    use_style()
+    mesures = pouvoir_de_classement(defaut, score_de_risque)
+    fig, axes = plt.subplots(1, 2, figsize=(12.4, 5.4))
+
+    roc_ks(axes[0], defaut, score_de_risque, etiquette="carte de score estimée")
+    axes[0].set_title(f"Aire {fr(mesures['aire'], 3)}, Gini {fr(mesures['gini'], 3)}, "
+                      f"écart de Kolmogorov-Smirnov {fr(mesures['ks'], 3)}")
+    # l'égalité avec le modèle vrai n'est pas un exploit et il ne faut pas la présenter comme tel :
+    # avec une seule variable d'emprunteur, tout classement croissant donne le même ordre
+    identique = abs(mesures["aire"] - plafond["aire"]) < 1e-12
+    axes[0].annotate("un devin qui connaîtrait le vrai modèle classerait\n"
+                     + ("exactement pareil : avec une seule variable\nd'emprunteur, il n'y a rien à "
+                        "gagner sur le classement" if identique
+                        else f"un peu mieux, à {fr(plafond['aire'], 3)}"),
+                     (0.40, 0.14), fontsize=9, color=GRIS)
+
+    annonce = 100 * calib["pd_annoncee_moyenne"]
+    observe = 100 * calib["taux_de_defaut_observe"]
+    erreur = 100 * 1.96 * calib["erreur_type"]
+    axes[1].errorbar(annonce, observe, yerr=erreur, fmt="o", markersize=6, capsize=3,
+                     color=OKABE_ITO[0], label="tranches de probabilité annoncée")
+    borne = float(max(annonce.max(), observe.max())) * 1.12
+    axes[1].plot([0, borne], [0, borne], color=GRIS, linestyle="--", linewidth=1.2,
+                 label="annonce exacte")
+    axes[1].set_xlim(0, borne)
+    axes[1].set_ylim(0, borne)
+    axes[1].set_xlabel("Probabilité de défaut annoncée par le modèle (%)")
+    axes[1].set_ylabel("Défauts réellement survenus (%)")
+    axes[1].legend(loc="upper left")
+    hors = int((abs(calib["ecart"]) > 2 * calib["erreur_type"]).sum())
+    axes[1].set_title(f"{len(calib) - hors} tranches sur {len(calib)} tiennent dans le hasard de "
+                      "l'échantillon")
+
+    fig.suptitle("Classer et chiffrer sont deux exercices différents ; c'est le second qui se joue "
+                 "à l'estimation")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    enregistrer(fig, dest.parent, dest.stem)
+    plt.close(fig)
+    return mesures

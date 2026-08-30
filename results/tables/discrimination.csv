@@ -1,0 +1,8 @@
+mesure,valeur
+"aire, carte de score",0.766969771128612
+"aire, modèle vrai",0.766969771128612
+part du plafond atteinte,1.0
+"gini, carte de score",0.533939542257224
+ecart de Kolmogorov-Smirnov,0.4038306742894883
+"ecart de calibration moyen, points",0.17611663321113163
+tranches hors hasard sur 10,0.0

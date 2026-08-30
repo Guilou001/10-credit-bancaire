@@ -36,7 +36,7 @@ def lab(out: Path = Path("results")) -> None:
     import numpy as np
     import pandas as pd
 
-    from clab import data, ecl, figures, pd_models
+    from clab import data, discrimination, ecl, figures, pd_models
 
     panel = data.simulate_portfolio()
     typer.echo(f"panel synthétique : {panel['pret'].nunique()} prêts, {len(panel)} lignes prêt-mois, "
@@ -72,8 +72,37 @@ def lab(out: Path = Path("results")) -> None:
                     {"scenario": "part_stade_2_pct", "ecl": res["part_stade_2_pct"]}]
                  ).to_csv(tables / "ecl_scenarios.csv", index=False)
 
+    # Le score classe-t-il bien, et ses probabilités sont-elles justes ? Les deux se mesurent sur
+    # la cohorte d'octroi, sur laquelle on connaît à la fois le score de départ et le défaut à
+    # douze mois.
+    macro_douze = panel.groupby("mois")["macro"].first().to_numpy()[:12]
+    pd_annoncee = np.array([pd_models.hazard_pd_12m(fitted, s, macro_douze)
+                            for s in cohort["score"]])
+    classement = discrimination.pouvoir_de_classement(cohort["defaut_12m"].to_numpy(), pd_annoncee)
+    plafond = discrimination.plafond_du_modele_vrai(cohort, verite, macro_douze)
+    calib = discrimination.calibration(cohort["defaut_12m"].to_numpy(), pd_annoncee)
+    resume = discrimination.resume_de_calibration(calib)
+    calib.to_csv(tables / "calibration.csv", index=False)
+    pd.DataFrame([{"mesure": "aire, carte de score", "valeur": classement["aire"]},
+                  {"mesure": "aire, modèle vrai", "valeur": plafond["aire"]},
+                  {"mesure": "part du plafond atteinte",
+                   "valeur": classement["aire"] / plafond["aire"]},
+                  {"mesure": "gini, carte de score", "valeur": classement["gini"]},
+                  {"mesure": "ecart de Kolmogorov-Smirnov", "valeur": classement["ks"]},
+                  {"mesure": "ecart de calibration moyen, points",
+                   "valeur": resume["ecart_moyen_points"]},
+                  {"mesure": "tranches hors hasard sur " + str(resume["tranches"]),
+                   "valeur": resume["tranches_hors_hasard"]}]
+                 ).to_csv(tables / "discrimination.csv", index=False)
+    typer.echo(f"classement : aire {classement['aire']:.3f} contre {plafond['aire']:.3f} pour le "
+               f"modèle vrai, Gini {classement['gini']:.3f}, KS {classement['ks']:.3f} ; "
+               f"calibration : écart moyen {resume['ecart_moyen_points']:+.2f} point, "
+               f"{resume['tranches_hors_hasard']} tranche(s) hors hasard sur {resume['tranches']}")
+
     figs = out / "figures"
     figs.mkdir(parents=True, exist_ok=True)
+    figures.fig_discrimination(cohort["defaut_12m"].to_numpy(), pd_annoncee, plafond, calib,
+                               figs / "discrimination.png")
     figures.fig_irb(figs / "capital_irb.png")
     figures.fig_ecl(res["par_scenario"], res["ecl_ponderee"], res["part_stade_2_pct"],
                     figs / "ecl_scenarios.png")

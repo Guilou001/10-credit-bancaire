@@ -96,6 +96,8 @@ rapportés). Ce que ce dépôt apporte :
 | Hasard : constante (vrai −6,20) | estimé −6,13 (`hasard_verite_vs_estime.csv`) |
 | Hasard : coefficient du score (vrai −1,10) | estimé −1,05 |
 | Hasard : coefficient du cycle (vrai 0,90) | estimé 0,85 |
+| Pouvoir de classement du score : aire, Gini, écart de Kolmogorov-Smirnov | 0,767 ; 0,534 ; 0,404 (`discrimination.csv`) |
+| Calibration : écart moyen entre annoncé et réalisé | +0,18 point, 0 tranche sur 10 hors du hasard (`calibration.csv`) |
 | ECL par scénario (favorable / base / adverse) | 9,79 / 13,10 / 16,72 M$ (`ecl_scenarios.csv`) |
 | ECL pondérée contre centrale | 13,18 contre 13,10 M$ : la convexité coûte 0,6 % |
 | Part du livre en stade 2 (construite : un tiers détérioré) | 33,2 % |
@@ -114,6 +116,34 @@ dans le cycle et par l'asymétrie déclarée des scénarios (états du cycle −
 entre le B interne d'Enbridge et le BBB des agences n'est pas une erreur de calcul : c'est la
 limite structurelle d'une grille de ratios, aveugle à la nature contractuelle des flux d'un
 pipeline réglementé, et le mémo la déclare au lieu de la maquiller.
+
+### Le score classe-t-il, et ses probabilités tombent-elles juste
+
+Ce sont deux questions différentes, et un modèle peut réussir l'une et manquer l'autre. La première
+demande si le score range les emprunteurs dans le bon ordre. La seconde demande si les probabilités
+qu'il annonce sont du bon niveau : un score peut classer parfaitement et annoncer 2 % de défauts là
+où il y en a 6 %.
+
+![Le pouvoir de classement du score et la justesse de ses probabilités](results/figures/discrimination.png)
+
+Comment lire cette figure : à gauche, la part des défaillants qu'on attrape en fonction de la part de
+sains qu'on rejette. Plus la courbe monte vite, mieux le score classe. L'aire sous cette courbe vaut
+**0,767**, ce qui veut dire que sur deux emprunteurs tirés au hasard, l'un défaillant et l'autre non,
+le score met le défaillant devant dans 76,7 % des cas. À droite, chaque point est une tranche de
+probabilité annoncée, et sa position verticale est ce qui est réellement arrivé ; les barres sont
+l'incertitude due au nombre d'emprunteurs de la tranche.
+
+Comment lire ces deux nombres, en trois constats. Le premier est que l'aire de 0,767 est **exactement
+celle qu'atteindrait quelqu'un qui connaîtrait la vraie loi des défauts**, à quinze décimales. Ce
+n'est pas un exploit de l'estimation et il ne faut pas le présenter comme tel : le portefeuille
+construit n'a qu'une seule variable d'emprunteur, et tout classement croissant de cette variable
+donne le même ordre. Il n'y avait rien à gagner ni à perdre sur le classement. Le deuxième est que
+c'est donc la **calibration** qui porte le vrai résultat : les coefficients estimés auraient pu être
+faux, et les probabilités annoncées auraient alors été décalées. Elles ne le sont pas, l'écart moyen
+valant **+0,18 point** et aucune des dix tranches ne sortant du hasard de l'échantillon. Le troisième
+est que ce compte de tranches se lit avec la taille de l'échantillon en tête : sur vingt mille
+emprunteurs par tranche, l'incertitude tombe à 0,07 point et un écart de 0,15 point, sans intérêt
+pour un service de crédit, sortirait déjà du hasard.
 
 ![Provisions des grandes banques](results/figures/pcl_grandes_banques.png)
 
@@ -164,6 +194,7 @@ uv run clab credit                # le dossier Enbridge : tables, figure, classe
 
 | Limite | Statut |
 |---|---|
+| L'aire sous la courbe égale celle du modèle vrai, ce qui ne prouve rien sur l'estimation | déclaré ; le portefeuille construit n'a qu'une variable d'emprunteur, donc le classement est le même pour toute fonction croissante de cette variable |
 | L'échantillon Freddie Mac exige une inscription (usage non commercial) : les moteurs ne sont pas encore confrontés à de vrais prêts hypothécaires ; le chargeur et le protocole les attendent | déclaré ; dépôt manuel documenté |
 | Le miroir canadien se limite à la série Valet des provisions ; les arriérés provinciaux (régressions de Pugh, Webley et Wang, 2026) restent à répliquer | reconnu ; suite déclarée de la fiche |
 | LGD fixée à 25 % (précepte), EAD constantes : pas de modèle de LGD ni d'amortissement | choix déclaré |
