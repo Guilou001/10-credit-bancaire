@@ -10,6 +10,8 @@ d'emploi sur dix demandent : un dossier de crédit Excel complet sur Enbridge.
 ![python](https://img.shields.io/badge/python-3.12-blue)
 ![licence](https://img.shields.io/badge/code-MIT-green)
 
+Le même contenu en PDF : [rapport/rapport.pdf](rapport/rapport.pdf).
+
 **Résultat en une phrase.** Sur 8 000 prêts simulés (381 686 lignes prêt-mois), **le modèle de
 hasard en temps discret retrouve les trois paramètres du générateur** (−6,13 estimé contre −6,20
 vrai pour la constante, −1,05 contre −1,10 pour le score, 0,85 contre 0,90 pour le cycle) ; l'ECL
