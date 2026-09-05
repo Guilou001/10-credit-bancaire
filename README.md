@@ -1,10 +1,12 @@
-# Un laboratoire de crédit : des moteurs de PD vérifiés sur vérité connue, jusqu'au dossier Excel
+# Construire un modèle de crédit, puis vérifier ce qu'il mesure
 
-Le risque de crédit de bout en bout : trois moteurs de probabilité de défaut testés sur un
-portefeuille synthétique dont les paramètres sont CONNUS (un moteur honnête doit les retrouver, et
-c'est testé), la provision IFRS 9 par scénarios pondérés, le capital réglementaire aux paramètres
-de l'OSFI, les provisions réelles des grandes banques canadiennes, et le livrable que dix offres
-d'emploi sur dix demandent : un dossier de crédit Excel complet sur Enbridge.
+Une banque doit estimer la probabilité qu'un emprunteur ne rembourse pas son prêt. Cette probabilité sert ensuite à calculer une provision comptable, un besoin de capital et une décision de crédit. Toutefois, de bons indicateurs de classement ne suffisent pas à prouver que le modèle retrouve correctement le risque.
+
+Le présent projet construit d'abord un portefeuille simulé dont les paramètres sont connus. Trois moteurs de probabilité de défaut doivent retrouver ces paramètres avant d'être utilisés dans des exercices bancaires. Le dépôt relie ensuite cette vérification à une provision selon IFRS 9, à la formule de capital du BSIF et à un dossier de crédit sur Enbridge.
+
+**Résultat principal.** Sur 8 000 prêts et 381 686 observations mensuelles, le modèle retrouve les trois paramètres du simulateur à moins de 0,07 près. Son aire sous la courbe atteint 0,767 et l'écart moyen de calibration vaut 0,18 point de pourcentage. De plus, la provision pondérée par trois scénarios atteint 13,18 millions de dollars, contre 13,10 millions pour le seul scénario central. Cet écart mesure l'effet de la convexité plutôt que l'effet d'un scénario moyen différent.
+
+Afin de suivre le projet de bout en bout, nous présenterons d'abord les prêts simulés, les données publiques et leurs limites. Dans un deuxième temps, nous expliquerons les trois moteurs et la manière dont ils sont contrôlés. Ensuite, nous calculerons la provision, le capital réglementaire et les indicateurs du dossier Enbridge. Enfin, nous présenterons les résultats, le classeur Excel et la procédure de reproduction.
 
 [![ci](https://github.com/Guilou001/10-credit-bancaire/actions/workflows/ci.yml/badge.svg)](https://github.com/Guilou001/10-credit-bancaire/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.12-blue)
@@ -12,12 +14,8 @@ d'emploi sur dix demandent : un dossier de crédit Excel complet sur Enbridge.
 
 Le même contenu en PDF : [rapport/rapport.pdf](rapport/rapport.pdf).
 
-**Résultat en une phrase.** Sur 8 000 prêts simulés (381 686 lignes prêt-mois), **le modèle de
-hasard en temps discret retrouve les trois paramètres du générateur** (−6,13 estimé contre −6,20
-vrai pour la constante, −1,05 contre −1,10 pour le score, 0,85 contre 0,90 pour le cycle) ; l'ECL
-pondérée par trois scénarios dépasse celle du scénario central (13,18 contre 13,10 M$, la
-convexité mesurée), et le dossier Enbridge illustre pourquoi une grille de ratios donne B là où
-les agences donnent BBB : elle ne voit pas la nature contractuelle des flux.
+<details>
+<summary>Résumé en anglais</summary>
 
 *English summary.* Credit risk end to end, with a verification twist: three PD engines (WoE
 scorecard, Shumway discrete-time hazard, Vasicek point-in-time) tested on a synthetic loan-month
@@ -30,7 +28,8 @@ live-formula projections, weighted scorecard, covenants) with a bilingual memo e
 generic rubric yields internal B where agencies assign BBB. Freddie Mac loan-level data requires
 registration and is declared as a manual deposit, not silently skipped.
 
-## 1. La question posée
+</details>
+## 1. La question en détail
 
 Un modèle de crédit peut avoir de bons indicateurs et être faux : comment PROUVER qu'un moteur de
 PD mesure ce qu'il prétend ? La réponse du dépôt : le faire tourner sur un monde où la vérité est
@@ -49,7 +48,7 @@ fois le passage au point du cycle et la formule de capital de Bâle (BCBS, 2005)
 propres de l'OSFI (corrélation hypothécaire 0,15, PD plancher 0,05 %, LGD plancher 10 %,
 rapportés). Ce que ce dépôt apporte :
 
-- **La vérification par vérité connue** : le simulateur (défaut ET remboursement anticipé en
+- **La vérification sur des paramètres connus d'avance** : le simulateur (défaut ET remboursement anticipé en
   risque concurrent) est publié avec ses paramètres, et le test exige que le moteur les retrouve.
 - **La convexité rendue visible** : l'ECL pondérée par scénarios dépasse l'ECL du scénario
   central, sur les mêmes prêts, par la convexité de la PD dans le cycle et l'asymétrie déclarée
@@ -64,7 +63,7 @@ rapportés). Ce que ce dépôt apporte :
 
 | Source | Contenu | Statut et accès |
 |---|---|---|
-| Simulateur du dépôt | 8 000 prêts, 72 mois, hasard logistique (constante −6,2 ; score −1,1 ; cycle 0,9), remboursement anticipé 0,8 %/mois | vérité connue, graine fixée |
+| Simulateur du dépôt | 8 000 prêts, 72 mois, hasard logistique (constante −6,2 ; score −1,1 ; cycle 0,9), remboursement anticipé 0,8 %/mois | paramètres connus d'avance, graine fixée |
 | SEC, companyfacts (CIK 895728) | Enbridge, exercices 2011-2025 en CAD (revenus, EBITDA, dette, intérêts, flux ; la source remonte à 2010, l'exercice incomplet est écarté, coupe déclarée) | mesuré ; `clab fetch`, jamais commité |
 | Banque du Canada, Valet | FVI_PCL_RATIO_SIB : provisions pour pertes / encours, grandes banques, 2018-2026 trimestriel | mesuré (rapporté par la BdC) ; `clab fetch` |
 | Freddie Mac, échantillon prêt par prêt | 50 000 prêts par millésime, 1999-2026 | inscription gratuite non scriptable : DÉPÔT MANUEL déclaré, le laboratoire tourne sans lui sur le synthétique |
@@ -106,7 +105,7 @@ rapportés). Ce que ce dépôt apporte :
 | Enbridge 2025 : levier, couverture, DSCR, FFO/dette | 6,28 x ; 3,31 x ; 1,40 x ; 11,75 % |
 | Note interne d'Enbridge (grille déclarée) | 2,40 sur 5, lettre B ; les agences : catégorie BBB (rapporté) |
 
-Comment lire ce tableau, en trois constats. D'abord, la vérification par vérité connue fonctionne :
+Comment lire ce tableau, en trois constats. D'abord, la vérification sur des paramètres connus d'avance fonctionne :
 les trois paramètres sont retrouvés à moins de 0,07 près, sur un panel où 20,4 % des prêts font
 défaut et où le remboursement anticipé censure les autres ; c'est la preuve que le moteur mesure
 bien le hasard et pas un artefact. Ensuite, la pondération de scénarios n'est pas un rituel : sur

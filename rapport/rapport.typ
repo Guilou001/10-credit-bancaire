@@ -1,4 +1,4 @@
-#set document(title: "Un laboratoire de crédit : des moteurs de PD vérifiés sur vérité connue, jusqu'au dossier Excel", author: "Guillaume Vaudescal")
+#set document(title: "Construire un modèle de crédit, puis vérifier ce qu'il mesure", author: "Guillaume Vaudescal")
 #set page(
   paper: "a4",
   margin: (x: 2.2cm, y: 2.4cm),
@@ -30,24 +30,30 @@
 
 #align(center)[
   #block(width: 100%)[
-    #text(size: 18pt, weight: "bold")[Un laboratoire de crédit : des moteurs de PD vérifiés sur vérité connue, jusqu'au dossier Excel]
+    #text(size: 18pt, weight: "bold")[Construire un modèle de crédit, puis vérifier ce qu'il mesure]
     #v(0.6em)
-    #text(size: 10pt, fill: luma(70))[Guillaume Vaudescal · 2026-08-30 · #link("https://github.com/Guilou001/10-credit-bancaire")[Guilou001/10-credit-bancaire]]
+    #text(size: 10pt, fill: luma(70))[Guillaume Vaudescal · 2026-09-04 · #link("https://github.com/Guilou001/10-credit-bancaire")[Guilou001/10-credit-bancaire]]
   ]
 ]
 #v(1.2em)
 #line(length: 100%, stroke: 0.6pt + luma(190))
 #v(0.8em)
 
-Le risque de crédit de bout en bout : trois moteurs de probabilité de défaut testés sur un portefeuille synthétique dont les paramètres sont CONNUS (un moteur honnête doit les retrouver, et c'est testé), la provision IFRS 9 par scénarios pondérés, le capital réglementaire aux paramètres de l'OSFI, les provisions réelles des grandes banques canadiennes, et le livrable que dix offres d'emploi sur dix demandent : un dossier de crédit Excel complet sur Enbridge.
+Une banque doit estimer la probabilité qu'un emprunteur ne rembourse pas son prêt. Cette probabilité sert ensuite à calculer une provision comptable, un besoin de capital et une décision de crédit. Toutefois, de bons indicateurs de classement ne suffisent pas à prouver que le modèle retrouve correctement le risque.
+
+Le présent projet construit d'abord un portefeuille simulé dont les paramètres sont connus. Trois moteurs de probabilité de défaut doivent retrouver ces paramètres avant d'être utilisés dans des exercices bancaires. Le dépôt relie ensuite cette vérification à une provision selon IFRS 9, à la formule de capital du BSIF et à un dossier de crédit sur Enbridge.
+
+*Résultat principal.* Sur 8 000 prêts et 381 686 observations mensuelles, le modèle retrouve les trois paramètres du simulateur à moins de 0,07 près. Son aire sous la courbe atteint 0,767 et l'écart moyen de calibration vaut 0,18 point de pourcentage. De plus, la provision pondérée par trois scénarios atteint 13,18 millions de dollars, contre 13,10 millions pour le seul scénario central. Cet écart mesure l'effet de la convexité plutôt que l'effet d'un scénario moyen différent.
+
+Afin de suivre le projet de bout en bout, nous présenterons d'abord les prêts simulés, les données publiques et leurs limites. Dans un deuxième temps, nous expliquerons les trois moteurs et la manière dont ils sont contrôlés. Ensuite, nous calculerons la provision, le capital réglementaire et les indicateurs du dossier Enbridge. Enfin, nous présenterons les résultats, le classeur Excel et la procédure de reproduction.
 
 Le même contenu en PDF : #link("rapport/rapport.pdf")[rapport/rapport.pdf].
 
-*Résultat en une phrase.* Sur 8 000 prêts simulés (381 686 lignes prêt-mois), *le modèle de hasard en temps discret retrouve les trois paramètres du générateur* (−6,13 estimé contre −6,20 vrai pour la constante, −1,05 contre −1,10 pour le score, 0,85 contre 0,90 pour le cycle) ; l'ECL pondérée par trois scénarios dépasse celle du scénario central (13,18 contre 13,10 M\$, la convexité mesurée), et le dossier Enbridge illustre pourquoi une grille de ratios donne B là où les agences donnent BBB : elle ne voit pas la nature contractuelle des flux.
+== Résumé en anglais
 
 _English summary._ Credit risk end to end, with a verification twist: three PD engines (WoE scorecard, Shumway discrete-time hazard, Vasicek point-in-time) tested on a synthetic loan-month panel with KNOWN parameters that the hazard model provably recovers; IFRS 9 ECL with weighted scenarios and staging (weighted ECL exceeds the central scenario, convexity measured); OSFI-floored IRB mortgage capital verified against a hand computation; real Canadian big-six loan-loss provisions (Bank of Canada Valet, peak 1.42 % in 2020Q2, negative in 2021); and the deliverable every commercial-credit posting asks for: a full Excel credit file on Enbridge (spreading, ratios, live-formula projections, weighted scorecard, covenants) with a bilingual memo explaining why a generic rubric yields internal B where agencies assign BBB. Freddie Mac loan-level data requires registration and is declared as a manual deposit, not silently skipped.
 
-== 1. La question posée
+== 1. La question en détail
 
 Un modèle de crédit peut avoir de bons indicateurs et être faux : comment PROUVER qu'un moteur de PD mesure ce qu'il prétend ? La réponse du dépôt : le faire tourner sur un monde où la vérité est connue. Un portefeuille synthétique est généré par un modèle de hasard dont on fixe les paramètres, puis chaque moteur est jugé sur sa capacité à les retrouver. En mots simples : avant de croire un modèle sur des données réelles, on vérifie qu'il retrouve la recette d'un monde qu'on a fabriqué. Ensuite viennent les trois usages bancaires : provisionner (IFRS 9), capitaliser (Bâle/OSFI), et décider d'un crédit (le dossier Enbridge).
 
@@ -55,7 +61,7 @@ Un modèle de crédit peut avoir de bons indicateurs et être faux : comment PRO
 
 Les briques sont canoniques : la carte de score à poids de la preuve (le standard bancaire), le hasard en temps discret de Shumway (2001), le modèle à un facteur de Vasicek (2002) qui fonde à la fois le passage au point du cycle et la formule de capital de Bâle (BCBS, 2005), l'ECL d'IFRS 9 (BCBS d350, 2015), et les planchers du chapitre 5 de la ligne directrice sur les normes de fonds propres de l'OSFI (corrélation hypothécaire 0,15, PD plancher 0,05 %, LGD plancher 10 %, rapportés). Ce que ce dépôt apporte :
 
-- *La vérification par vérité connue* : le simulateur (défaut ET remboursement anticipé en
+- *La vérification sur des paramètres connus d'avance* : le simulateur (défaut ET remboursement anticipé en
 
 risque concurrent) est publié avec ses paramètres, et le test exige que le moteur les retrouve.
 
@@ -83,7 +89,7 @@ formules vivantes, grille de cotation, covenants) sur une vraie société du TSX
     [*Statut et accès*],
     [Simulateur du dépôt],
     [8 000 prêts, 72 mois, hasard logistique (constante −6,2 ; score −1,1 ; cycle 0,9), remboursement anticipé 0,8 %/mois],
-    [vérité connue, graine fixée],
+    [paramètres connus d'avance, graine fixée],
     [SEC, companyfacts (CIK 895728)],
     [Enbridge, exercices 2011-2025 en CAD (revenus, EBITDA, dette, intérêts, flux ; la source remonte à 2010, l'exercice incomplet est écarté, coupe déclarée)],
     [mesuré ; #raw("clab fetch"), jamais commité],
@@ -118,6 +124,10 @@ formules vivantes, grille de cotation, covenants) sur une vraie société du TSX
     [estimé −1,05],
     [Hasard : coefficient du cycle (vrai 0,90)],
     [estimé 0,85],
+    [Pouvoir de classement du score : aire, Gini, écart de Kolmogorov-Smirnov],
+    [0,767 ; 0,534 ; 0,404 (#raw("discrimination.csv"))],
+    [Calibration : écart moyen entre annoncé et réalisé],
+    [+0,18 point, 0 tranche sur 10 hors du hasard (#raw("calibration.csv"))],
     [ECL par scénario (favorable / base / adverse)],
     [9,79 / 13,10 / 16,72 M\$ (#raw("ecl_scenarios.csv"))],
     [ECL pondérée contre centrale],
@@ -134,7 +144,17 @@ formules vivantes, grille de cotation, covenants) sur une vraie société du TSX
     [2,40 sur 5, lettre B ; les agences : catégorie BBB (rapporté)],
 )
 
-Comment lire ce tableau, en trois constats. D'abord, la vérification par vérité connue fonctionne : les trois paramètres sont retrouvés à moins de 0,07 près, sur un panel où 20,4 % des prêts font défaut et où le remboursement anticipé censure les autres ; c'est la preuve que le moteur mesure bien le hasard et pas un artefact. Ensuite, la pondération de scénarios n'est pas un rituel : sur les mêmes prêts, elle ajoute 0,6 % à la provision du seul scénario central, par la convexité de la PD dans le cycle et par l'asymétrie déclarée des scénarios (états du cycle −1,0 ; 0 ; +1,5, poids 25/50/25) ; l'écart grandit avec le poids des queues. Enfin, l'écart entre le B interne d'Enbridge et le BBB des agences n'est pas une erreur de calcul : c'est la limite structurelle d'une grille de ratios, aveugle à la nature contractuelle des flux d'un pipeline réglementé, et le mémo la déclare au lieu de la maquiller.
+Comment lire ce tableau, en trois constats. D'abord, la vérification sur des paramètres connus d'avance fonctionne : les trois paramètres sont retrouvés à moins de 0,07 près, sur un panel où 20,4 % des prêts font défaut et où le remboursement anticipé censure les autres ; c'est la preuve que le moteur mesure bien le hasard et pas un artefact. Ensuite, la pondération de scénarios n'est pas un rituel : sur les mêmes prêts, elle ajoute 0,6 % à la provision du seul scénario central, par la convexité de la PD dans le cycle et par l'asymétrie déclarée des scénarios (états du cycle −1,0 ; 0 ; +1,5, poids 25/50/25) ; l'écart grandit avec le poids des queues. Enfin, l'écart entre le B interne d'Enbridge et le BBB des agences n'est pas une erreur de calcul : c'est la limite structurelle d'une grille de ratios, aveugle à la nature contractuelle des flux d'un pipeline réglementé, et le mémo la déclare au lieu de la maquiller.
+
+=== Le score classe-t-il, et ses probabilités tombent-elles juste
+
+Ce sont deux questions différentes, et un modèle peut réussir l'une et manquer l'autre. La première demande si le score range les emprunteurs dans le bon ordre. La seconde demande si les probabilités qu'il annonce sont du bon niveau : un score peut classer parfaitement et annoncer 2 % de défauts là où il y en a 6 %.
+
+#figure(image("../results/figures/discrimination.png", width: 100%), caption: [Le pouvoir de classement du score et la justesse de ses probabilités])
+
+Comment lire cette figure : à gauche, la part des défaillants qu'on attrape en fonction de la part de sains qu'on rejette. Plus la courbe monte vite, mieux le score classe. L'aire sous cette courbe vaut *0,767*, ce qui veut dire que sur deux emprunteurs tirés au hasard, l'un défaillant et l'autre non, le score met le défaillant devant dans 76,7 % des cas. À droite, chaque point est une tranche de probabilité annoncée, et sa position verticale est ce qui est réellement arrivé ; les barres sont l'incertitude due au nombre d'emprunteurs de la tranche.
+
+Comment lire ces deux nombres, en trois constats. Le premier est que l'aire de 0,767 est *exactement celle qu'atteindrait quelqu'un qui connaîtrait la vraie loi des défauts*, à quinze décimales. Ce n'est pas un exploit de l'estimation et il ne faut pas le présenter comme tel : le portefeuille construit n'a qu'une seule variable d'emprunteur, et tout classement croissant de cette variable donne le même ordre. Il n'y avait rien à gagner ni à perdre sur le classement. Le deuxième est que c'est donc la *calibration* qui porte le vrai résultat : les coefficients estimés auraient pu être faux, et les probabilités annoncées auraient alors été décalées. Elles ne le sont pas, l'écart moyen valant *+0,18 point* et aucune des dix tranches ne sortant du hasard de l'échantillon. Le troisième est que ce compte de tranches se lit avec la taille de l'échantillon en tête : sur vingt mille emprunteurs par tranche, l'incertitude tombe à 0,07 point et un écart de 0,15 point, sans intérêt pour un service de crédit, sortirait déjà du hasard.
 
 #figure(image("../results/figures/pcl_grandes_banques.png", width: 100%), caption: [Provisions des grandes banques])
 
@@ -167,6 +187,8 @@ Le dossier complet : #link("reports/dossier_credit_enbridge.xlsx")[classeur Exce
   inset: 5pt,
     [*Limite*],
     [*Statut*],
+    [L'aire sous la courbe égale celle du modèle vrai, ce qui ne prouve rien sur l'estimation],
+    [déclaré ; le portefeuille construit n'a qu'une variable d'emprunteur, donc le classement est le même pour toute fonction croissante de cette variable],
     [L'échantillon Freddie Mac exige une inscription (usage non commercial) : les moteurs ne sont pas encore confrontés à de vrais prêts hypothécaires ; le chargeur et le protocole les attendent],
     [déclaré ; dépôt manuel documenté],
     [Le miroir canadien se limite à la série Valet des provisions ; les arriérés provinciaux (régressions de Pugh, Webley et Wang, 2026) restent à répliquer],
